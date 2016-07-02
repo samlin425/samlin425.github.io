@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<!-- saved from url=(0105)http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>Data processing platforms architectures with SMACK: Spark, Mesos, Akka, Cassandra and Kafka</title>
+    <meta name="description" content="">
+
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" href="http://datastrophic.io/favicon.ico">
+
+    <link rel="stylesheet" type="text/css" href="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/screen.css">
+    <link rel="stylesheet" type="text/css" href="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/css">
+    <link rel="stylesheet" type="text/css" href="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/prism.css">
+
+    <link rel="canonical" href="http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/">
+    
+    <meta property="og:site_name" content="datastrophic">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Data processing platforms architectures with SMACK: Spark, Mesos, Akka, Cassandra and Kafka">
+    <meta property="og:description" content="This post is a follow-up of the talk given at Big Data AW meetup in Stockholm and focused on different use cases and design approaches for building scalable data processing platforms with SMACK(Spark, Mesos, Akka, Cassandra, Kafka) stack. While...">
+    <meta property="og:url" content="http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/">
+    <meta property="article:published_time" content="2015-09-16T22:51:12.322Z">
+    <meta property="article:modified_time" content="2016-03-27T09:12:02.664Z">
+    <meta property="article:tag" content="Cassandra">
+    <meta property="article:tag" content="Mesos">
+    <meta property="article:tag" content="Akka">
+    <meta property="article:tag" content="Spark">
+    <meta property="article:tag" content="Kafka">
+    <meta property="article:tag" content="SMACK">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Data processing platforms architectures with SMACK: Spark, Mesos, Akka, Cassandra and Kafka">
+    <meta name="twitter:description" content="This post is a follow-up of the talk given at Big Data AW meetup in Stockholm and focused on different use cases and design approaches for building scalable data processing platforms with SMACK(Spark, Mesos, Akka, Cassandra, Kafka) stack. While...">
+    <meta name="twitter:url" content="http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/">
+    
+    <script async="" src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/analytics.js"></script><script type="application/ld+json">
+{
+    "@context": "http://schema.org",
+    "@type": "Article",
+    "publisher": "datastrophic",
+    "author": {
+        "@type": "Person",
+        "name": "Anton Kirillov",
+        "image": "//www.gravatar.com/avatar/935d478a02639e34cd9d753e81436b4e?s=250&d=mm&r=x",
+        "url": "http://datastrophic.io/author/akirillov",
+        "sameAs": null,
+        "description": "Distributed systems engineer building systems based on Cassandra/Spark/Mesos stack. Huge Scala/Akka fan."
+    },
+    "headline": "Data processing platforms architectures with SMACK: Spark, Mesos, Akka, Cassandra and Kafka",
+    "url": "http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/",
+    "datePublished": "2015-09-16T22:51:12.322Z",
+    "dateModified": "2016-03-27T09:12:02.664Z",
+    "keywords": "Cassandra, Mesos, Akka, Spark, Kafka, SMACK",
+    "description": "This post is a follow-up of the talk given at Big Data AW meetup in Stockholm and focused on different use cases and design approaches for building scalable data processing platforms with SMACK(Spark, Mesos, Akka, Cassandra, Kafka) stack. While..."
+}
+    </script>
+
+    <meta name="generator" content="Ghost 0.6">
+    <link rel="alternate" type="application/rss+xml" title="datastrophic" href="http://datastrophic.io/rss/">
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-65032691-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+<style id="fit-vids-style">.fluid-width-video-wrapper{width:100%;position:relative;padding:0;}.fluid-width-video-wrapper iframe,.fluid-width-video-wrapper object,.fluid-width-video-wrapper embed {position:absolute;top:0;left:0;width:100%;height:100%;}</style></head>
+<body class="post-template tag-cassandra tag-mesos tag-akka tag-spark tag-kafka tag-smack nav-closed">
+
+    
+
+    <div class="site-wrapper">
+
+        
+
+
+<header class="main-header post-head no-cover">
+    <nav class="main-nav  clearfix">
+        
+    </nav>
+</header>
+
+<main class="content" role="main">
+    <article class="post tag-cassandra tag-mesos tag-akka tag-spark tag-kafka tag-smack">
+
+        <header class="post-header">
+            <h1 class="post-title">Data processing platforms architectures with SMACK: Spark, Mesos, Akka, Cassandra and Kafka</h1>
+            <section class="post-meta">
+                <time class="post-date" datetime="2015-09-16">16 September 2015</time>  on <a href="http://datastrophic.io/tag/cassandra/">Cassandra</a>, <a href="http://datastrophic.io/tag/mesos/">Mesos</a>, <a href="http://datastrophic.io/tag/akka/">Akka</a>, <a href="http://datastrophic.io/tag/spark/">Spark</a>, <a href="http://datastrophic.io/tag/kafka/">Kafka</a>, <a href="http://datastrophic.io/tag/smack/">SMACK</a>
+            </section>
+        </header>
+
+        <section class="post-content">
+            <p>This post is a follow-up of the <a href="http://www.slideshare.net/akirillov/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka">talk given at Big Data AW meetup</a> in Stockholm and focused on different use cases and design approaches for building scalable data processing platforms with SMACK(Spark, Mesos, Akka, Cassandra, Kafka) stack. While stack is really concise and consists of only several components it is possible to implement different system designs which list not only purely batch or stream processing, but more complex Lambda and Kappa architectures as well. So let's start with a really short overview to be on the same page and continue with designs and examples coming from production projects experience.</p>
+
+<h6 id="recap">Recap</h6>
+
+<p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/SMACK-Stack-Architectures---Google-Slides-2015-09-15-23-34-56.jpg" alt=""></p>
+
+<ul>
+<li><p><a href="http://spark.apache.org/">Spark</a> - fast and general engine for distributed, large-scale data processing</p></li>
+<li><p><a href="http://mesos.apache.org/">Mesos</a> - cluster resource management system that provides efficient resource isolation and sharing across distributed applications</p></li>
+<li><p><a href="http://akka.io/">Akka</a> - a toolkit and runtime for building highly concurrent, distributed, and resilient message-driven applications on the JVM</p></li>
+<li><p><a href="http://cassandra.apache.org/">Cassandra</a> - distributed, highly available database designed to handle large amounts of data across multiple datacenters</p></li>
+<li><p><a href="http://kafka.apache.org/">Kafka</a> - a high-throughput, low-latency distributed messaging system/commit log designed for handling real-time data feeds</p></li>
+</ul>
+
+<h6 id="storagelayercassandra">Storage layer: Cassandra</h6>
+
+<p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Cassadnra-XDCR--2-.png" alt="">
+Cassandra is a well-known for its high-availability and high-throughput characteristics and is able to handle enourmous write loads and survive cluster nodes failures. In terms of CAP theorem Cassandra provides tunable consistency/availability for operations.</p>
+
+<p>What is more interesting when it comes to data processing is that Cassandra is linearly scalable(increased loads could be addressed by just adding more nodes to a cluster) and it provides cross-datacenter replication(XDCR) capabilities. Actually XDCR provides not only replication but a set of really interesting use cases to be used for:</p>
+
+<ul>
+<li>geo-distributed datacenters handling data specific for the region or located closer to customers</li>
+<li>data migration across datacenters: recovery after failures or moving data to a new DC</li>
+<li>separate operational and analytics workloads</li>
+</ul>
+
+<p>But all these features come for their own price and with Cassandra this price is its data model, which could be thought just as nested sorted map which is distributed across cluster nodes by partition key and entries are sorted/grouped by clustering columns. Here's a small example:</p>
+
+<pre class=" language-sql"><code class=" language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> campaign<span class="token punctuation">(</span>  
+  id uuid<span class="token punctuation">,</span>
+  year <span class="token keyword">int</span><span class="token punctuation">,</span>
+  month <span class="token keyword">int</span><span class="token punctuation">,</span>
+  day <span class="token keyword">int</span><span class="token punctuation">,</span>
+  views <span class="token keyword">bigint</span><span class="token punctuation">,</span>
+  clicks <span class="token keyword">bigint</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>id<span class="token punctuation">,</span> year<span class="token punctuation">,</span> month<span class="token punctuation">,</span> day<span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> campaign<span class="token punctuation">(</span>id<span class="token punctuation">,</span> year<span class="token punctuation">,</span> month<span class="token punctuation">,</span> day<span class="token punctuation">,</span> views<span class="token punctuation">,</span> clicks<span class="token punctuation">)</span>  
+<span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">40b08953</span><span class="token operator">-</span><span class="token number">a</span>…<span class="token punctuation">,</span><span class="token number">2015</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">,</span> <span class="token number">42</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> views<span class="token punctuation">,</span> clicks <span class="token keyword">FROM</span> campaign  
+<span class="token keyword">WHERE</span> id<span class="token operator">=</span><span class="token number">40b08953</span><span class="token operator">-</span><span class="token number">a</span>… <span class="token operator">and</span> year<span class="token operator">=</span><span class="token number">2015</span> <span class="token operator">and</span> month<span class="token operator">&gt;</span><span class="token number">8</span><span class="token punctuation">;</span>  
+</code></pre>
+
+<p>To get specific data in some range the full key must be specified and no range clauses allowed except for the last column in list. This constraint is introduced to limit multiple scans for different ranges which will produce random access to disks and lower down the performance. This means that data model should be carefully designed against read queries to limit amount of reads/scans which leads to lesser flexibility when it comes to support of new queries. <a href="http://slides.com/antonkirillov/cassandra-data-modelling-101#/">Here are C* data modelling 101</a>  slides which provide several examples of how CQL tables are represented internally.</p>
+
+<p>But what if one have some tables that need to be joined somehow with another tables? Let's consider the next case: calculate total views per campaign for given month for all campaigns.  </p>
+
+<pre class=" language-sql"><code class=" language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> event<span class="token punctuation">(</span>  
+  id uuid<span class="token punctuation">,</span>
+  ad_id uuid<span class="token punctuation">,</span>
+  campaign uuid<span class="token punctuation">,</span>
+  ts <span class="token keyword">bigint</span><span class="token punctuation">,</span>
+  <span class="token keyword">type</span> <span class="token keyword">text</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+
+<p>With given model the only way to achieve this goal is to read all campaigns, read all events, sum the proper ones (with matched campaign id) and assign to campaign. And it looks really challenging to implement such sort of application because amount of data stored in Cassandra could be really huge and won't fit the memory. So the processing of such sort of the data should be done in a distributed manner and Spark perfectly fits this use case.  </p>
+
+<h6 id="processinglayerspark">Processing layer: Spark</h6>
+
+<p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Spark-Basics--RDD--DAG--Scheduler---1-.png" alt="">
+The main abstraction Spark operates with is RDD(Resilient Distributed Dataset, a distributed collection of elements) and the workflow consists of four main phases:</p>
+
+<ul>
+<li>RDD operations(transformations and actions) form DAG (Direct Acyclic Graph)</li>
+<li>DAG is split into stages of tasks which are then submitted to cluster manager</li>
+<li>stages combine tasks which don’t require shuffling/repartitioning</li>
+<li>tasks run on workers and results then return to the client</li>
+</ul>
+
+<p>Here's how one can solve the above problem with Spark and Cassandra:  </p>
+
+<pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> sc <span class="token operator">=</span> <span class="token keyword">new</span> SparkContext<span class="token punctuation">(</span>conf<span class="token punctuation">)</span>
+
+<span class="token keyword">case</span> <span class="token keyword">class</span> Event<span class="token punctuation">(</span>id<span class="token operator">:</span> UUID<span class="token punctuation">,</span> ad_id<span class="token operator">:</span> UUID<span class="token punctuation">,</span> campaign<span class="token operator">:</span> UUID<span class="token punctuation">,</span> ts<span class="token operator">:</span> <span class="token builtin">Long</span><span class="token punctuation">,</span> `<span class="token keyword">type</span>`<span class="token operator">:</span> <span class="token builtin">String</span><span class="token punctuation">)</span>
+
+sc<span class="token punctuation">.</span>cassandraTable<span class="token punctuation">[</span>Event<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"keyspace"</span><span class="token punctuation">,</span> <span class="token string">"event"</span><span class="token punctuation">)</span>  
+  <span class="token punctuation">.</span>filter<span class="token punctuation">(</span>e <span class="token keyword">=&gt;</span> e<span class="token punctuation">.</span>`<span class="token keyword">type</span>` <span class="token operator">==</span> <span class="token string">"view"</span> <span class="token operator">&amp;&amp;</span> checkMonth<span class="token punctuation">(</span>e<span class="token punctuation">.</span>ts<span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>map<span class="token punctuation">(</span>e <span class="token keyword">=&gt;</span> <span class="token punctuation">(</span>e<span class="token punctuation">.</span>campaign<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>reduceByKey<span class="token punctuation">(</span>_ <span class="token operator">+</span> _<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>collect<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+
+<p>Interaction with Cassandra is performed via <a href="https://github.com/datastax/spark-cassandra-connector">spark-cassandra-connector</a> which makes it really easy and straightforward. There's one more interesting option to work with NoSQL stores - SparkSQL, which translates SQL statements into a series of RDD operations.  </p>
+
+<pre class=" language-scala"><code class=" language-scala"><span class="token keyword">case</span> <span class="token keyword">class</span> CampaignReport<span class="token punctuation">(</span>id<span class="token operator">:</span> <span class="token builtin">String</span><span class="token punctuation">,</span> views<span class="token operator">:</span> <span class="token builtin">Long</span><span class="token punctuation">,</span> clicks<span class="token operator">:</span> <span class="token builtin">Long</span><span class="token punctuation">)</span>
+
+sql<span class="token punctuation">(</span><span class="token string">"""SELECT campaign.id as id, campaign.views as views,  
+   campaign.clicks as clicks, event.type as type
+        FROM campaign
+        JOIN event ON campaign.id = event.campaign
+    """</span><span class="token punctuation">)</span><span class="token punctuation">.</span>rdd
+<span class="token punctuation">.</span>groupBy<span class="token punctuation">(</span>row <span class="token keyword">=&gt;</span> row<span class="token punctuation">.</span>getAs<span class="token punctuation">[</span><span class="token builtin">String</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">.</span>map<span class="token punctuation">{</span> <span class="token keyword">case</span> <span class="token punctuation">(</span>id<span class="token punctuation">,</span> rows<span class="token punctuation">)</span> <span class="token keyword">=&gt;</span>
+   <span class="token keyword">val</span> views <span class="token operator">=</span> rows<span class="token punctuation">.</span>head<span class="token punctuation">.</span>getAs<span class="token punctuation">[</span><span class="token builtin">Long</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"views"</span><span class="token punctuation">)</span>
+   <span class="token keyword">val</span> clicks <span class="token operator">=</span> rows<span class="token punctuation">.</span>head<span class="token punctuation">.</span>getAs<span class="token punctuation">[</span><span class="token builtin">Long</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"clicks"</span><span class="token punctuation">)</span>
+
+   <span class="token keyword">val</span> res <span class="token operator">=</span> rows<span class="token punctuation">.</span>groupBy<span class="token punctuation">(</span>row <span class="token keyword">=&gt;</span> row<span class="token punctuation">.</span>getAs<span class="token punctuation">[</span><span class="token builtin">String</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"type"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>mapValues<span class="token punctuation">(</span>_<span class="token punctuation">.</span>size<span class="token punctuation">)</span>
+   CampaignReport<span class="token punctuation">(</span>id<span class="token punctuation">,</span> views <span class="token operator">=</span> views <span class="token operator">+</span> res<span class="token punctuation">(</span><span class="token string">"view"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> clicks <span class="token operator">=</span> clicks <span class="token operator">+</span> res<span class="token punctuation">(</span><span class="token string">"click"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token punctuation">}</span><span class="token punctuation">.</span>saveToCassandra<span class="token punctuation">(</span>“keyspace”<span class="token punctuation">,</span> “campaign_report”<span class="token punctuation">)</span>
+</code></pre>
+
+<p>With several lines of code it's possible to implement naive Lamba design which of course could be much more sophisticated, but this example shows just how easy this can be achieved.  </p>
+
+<h6 id="almostmapreducebringingprocessingclosertodata">Almost MapReduce: bringing processing closer to data</h6>
+
+<p>Spark-Cassandra connector is data locality aware and reads the data from the closest node in a cluster  thus minimizing the amount of data trasfered around the network. To fully facilitate Spark-C* connector data locality awareness, Spark workers should be collocated with Cassandra nodes. <br>
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Cassadnra-Spark--5-.png" alt="">
+Alongside with Spark collocation with Cassandra, it makes sense to separate your operational (or write-heavy) cluster from one for analytics:</p>
+
+<ul>
+<li>clusters can be scaled independently</li>
+<li>data is replicated by Cassandra, no extra-work needed</li>
+<li>analytics cluster has different Read/Write load patterns </li>
+<li>analytics cluster could contain additional data (e.g. dictionaries) and processing results</li>
+<li>Spark resource impact is limited to only one cluster</li>
+</ul>
+
+<p>Let's look at Spark applications deplyment options one more time: <br>
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/cluster-overview.png" alt="">
+There are three main options available for cluster resource manager: </p>
+
+<ul>
+<li>Spark Standalone - Spark master and Workers are installed and executed as standalone applications (which obviously introduces some ops overhead and support only static resource allocation per worker)</li>
+<li>YARN is really nice if you already have Hadoop ecosystem</li>
+<li>Mesos which from the beggining was designed for dynamic allocation of cluster resources and not only for running Hadoop applications but for handling heterogeneous workloads</li>
+</ul>
+
+<h6 id="mesosarchitecture">Mesos architecture</h6>
+
+<p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Mesos-Overview.png" alt="">
+Mesos cluster consists of Master nodes which are responsible for resource offers and scheduling and Slave nodes which do the actual heavy lifting of tasks execution. In HA mode with multiple Masters ZooKeeper is used for leader election and service discovery. Applications executed on Mesos are called Frameworks and utilize API to handle resource offers and submit tasks to Mesos. Generally the process of task execution consists of these steps:</p>
+
+<ul>
+<li>Slaves publish available resources to Master</li>
+<li>Master sends resource offers to Frameworks</li>
+<li>Scheduler replies with tasks and resources needed per task</li>
+<li>Master sends tasks to slaves</li>
+</ul>
+
+<h6 id="bringingsparkmesosandcassandratogether">Bringing Spark, Mesos and Cassandra together</h6>
+
+<p>As said before Spark workers should be collocated with Cassandra nodes to enforce data locality awareness thus lowering amount of network traffic and Cassandra cluster load. Here's one of the possible deplyment scenarios how to achieve this with Mesos. <br>
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Spark-Mesos-Cassandra--2-.png" alt=""></p>
+
+<ul>
+<li>Mesos Masters and ZooKeepers collocated</li>
+<li>Mesos Slaves and Cassandra nodes collocated to enforce better data locality for Spark</li>
+<li>Spark binaries deployed to all worker nodes and <code>spark-env.sh</code> is configured with proper master endpoints and executor jar location</li>
+<li>Spark Executor JAR uploaded to S3/HDFS</li>
+</ul>
+
+<p>With provided setup Spark job can be submitted to the cluster with simple <code>spark-submit</code> invocation from any worker nodes having Spark binaries installed and assembly jar containing actual job logic uploaded  </p>
+
+<pre class=" language-bash"><code class=" language-bash">spark-submit --class io.datastrophic.SparkJob /etc/jobs/spark-jobs.jar  
+</code></pre>
+
+<p>There exist options to run Dockerized Spark so that there's no need to distribute binaries to across every single cluster node.</p>
+
+<h6 id="scheduledandlongrunningtasksexecution">Scheduled and Long-running tasks execution</h6>
+
+<p>Every data processing system sooner or later faces the necessity of running two types of jobs: scheduled/periodic jobs like periodic batch aggregations and long-running ones which are the case for stream processing. The main requirement for both of these types is fault tolerance -  jobs must continue running even in case of cluster nodes failures. Mesos ecosistem comes with two great frameworks supporting each of this types of jobs.</p>
+
+<p><strong>Marathon</strong> is a framework for fault-tolerant execution of long-running tasks supporting HA mode with ZooKeeper, able to run Docker and having a nice REST API. Here's an example of simple job configuration running <code>spark-submit</code> as shell command:
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Marathon-2015-09-08-22-13-39.jpg" alt=""></p>
+
+<p><strong>Chronos</strong> has the same charasteristics as Marathon but designed for running sheduled jobs and in general it is distributed HA cron supporting graphs of jobs. Here's an example of S3 compaction job configuration which is implemented as a simple bash script:
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Chronos-2015-09-08-22-21-15.jpg" alt=""></p>
+
+<p>There are plenty of frameworks already available or under active development which targeted to integrate widely used systems with Mesos resource management capabilities. Just to name some of them:</p>
+
+<ul>
+<li>Hadoop</li>
+<li>Cassandra</li>
+<li>Kafka</li>
+<li>Myriad: YARN on Mesos</li>
+<li>Storm</li>
+<li>Samza</li>
+</ul>
+
+<h6 id="ingestingthedata">Ingesting the data</h6>
+
+<p>So far so good: the storage layer is designed, resource management is set up and jobs are configured. The only thing which is not there yet is the data to process. <br>
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Architecture-Ingestion--2-.png" alt="">
+Assuming that incoming data will arrive at high rates the endpoints which will receive it should meet next requirements: </p>
+
+<ul>
+<li>provide high throughput/low latency</li>
+<li>being resilient</li>
+<li>allow easy scalability</li>
+<li>support back pressure</li>
+</ul>
+
+<p>Back pressure is not a must, but it would be nice to have this as an option to handle load spikes.</p>
+
+<p>Akka perfectly fits the requirements and basically it was designed to provide this feature set. So what's is Akka:</p>
+
+<ul>
+<li>actor model implementation for JVM</li>
+<li>message-based and asynchronous</li>
+<li>enforces no shared mutable state</li>
+<li>easy scalable from one process to cluster of machines</li>
+<li>actors form hierarchies with parental supervision</li>
+<li>not only concurrency framework: akka-http, akka-streams, akka-persistence</li>
+</ul>
+
+<p>Here's a simplified example of three actors which handle JSON HttpRequest, parse it into domain model case class and save it to Cassandra:  </p>
+
+<pre class=" language-scala"><code class=" language-scala"><span class="token keyword">class</span> HttpActor <span class="token keyword">extends</span> Actor <span class="token punctuation">{</span>  
+  <span class="token keyword">def</span> receive <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token keyword">case</span> req<span class="token operator">:</span> HttpRequest <span class="token keyword">=&gt;</span> 
+      system<span class="token punctuation">.</span>actorOf<span class="token punctuation">(</span>Props<span class="token punctuation">[</span>JsonParserActor<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">!</span> req<span class="token punctuation">.</span>body
+    <span class="token keyword">case</span> e<span class="token operator">:</span> Event <span class="token keyword">=&gt;</span>
+      system<span class="token punctuation">.</span>actorOf<span class="token punctuation">(</span>Props<span class="token punctuation">[</span>CassandraWriterActor<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">!</span> e
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">class</span> JsonParserActor <span class="token keyword">extends</span> Actor <span class="token punctuation">{</span>  
+  <span class="token keyword">def</span> receive <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token keyword">case</span> s<span class="token operator">:</span> <span class="token builtin">String</span> <span class="token keyword">=&gt;</span> Try<span class="token punctuation">(</span>Json<span class="token punctuation">.</span>parse<span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">.</span>as<span class="token punctuation">[</span>Event<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token keyword">match</span> <span class="token punctuation">{</span>
+      <span class="token keyword">case</span> Failure<span class="token punctuation">(</span>ex<span class="token punctuation">)</span> <span class="token keyword">=&gt;</span> <span class="token comment" spellcheck="true">//error handling code</span>
+      <span class="token keyword">case</span> Success<span class="token punctuation">(</span>event<span class="token punctuation">)</span> <span class="token keyword">=&gt;</span> sender <span class="token operator">!</span> event
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">class</span> CassandraWriterActor <span class="token keyword">extends</span> Actor <span class="token keyword">with</span> ActorLogging <span class="token punctuation">{</span>  
+  <span class="token comment" spellcheck="true">//for demo purposes, session initialized here</span>
+  <span class="token keyword">val</span> session <span class="token operator">=</span> Cluster<span class="token punctuation">.</span>builder<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>addContactPoint<span class="token punctuation">(</span><span class="token string">"cassandra.host"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>build<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>connect<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+  <span class="token keyword">override</span> <span class="token keyword">def</span> receive<span class="token operator">:</span> Receive <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token keyword">case</span> event<span class="token operator">:</span> Event <span class="token keyword">=&gt;</span>
+      <span class="token keyword">val</span> statement <span class="token operator">=</span> <span class="token keyword">new</span> SimpleStatement<span class="token punctuation">(</span>event<span class="token punctuation">.</span>createQuery<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>setConsistencyLevel<span class="token punctuation">(</span>ConsistencyLevel<span class="token punctuation">.</span>QUORUM<span class="token punctuation">)</span>
+
+      Try<span class="token punctuation">(</span>session<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>statement<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">match</span> <span class="token punctuation">{</span>
+        <span class="token keyword">case</span> Failure<span class="token punctuation">(</span>ex<span class="token punctuation">)</span> <span class="token keyword">=&gt;</span> <span class="token comment" spellcheck="true">//error handling code</span>
+        <span class="token keyword">case</span> Success <span class="token keyword">=&gt;</span> sender <span class="token operator">!</span> WriteSuccessfull
+      <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+
+<p>It looks like only several lines of code are needed to make everything work, but while writing raw data (events) to Cassandra with Akka is easy there is number of gotchas:</p>
+
+<ul>
+<li>Cassandra is still designed for fast serving but not batch processing, so pre-aggregation of incoming data is needed</li>
+<li>computation time of aggregations/rollups will grow with amount of data</li>
+<li>actors are not suitable for performing aggregation due to stateless design model</li>
+<li>micro-batches could partially solve the problem</li>
+<li>some sort of reliable buffer for raw data is still needed</li>
+</ul>
+
+<h6 id="kafkaasabufferforincomingdata">Kafka as a buffer for incoming data</h6>
+
+<p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Architecture-Ingestion-Kafka--1-.png" alt="">
+For keeping incoming data with some retention and its further pre-aggregation/processing some sort of distributed commit log could be used. In this case consumers will read data in batches, process it and store it into Cassandra in form of pre-aggregates. Here's an example of publishing JSON data coming over HTTP to Kafka with akka-http:  </p>
+
+<pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> config <span class="token operator">=</span> <span class="token keyword">new</span> ProducerConfig<span class="token punctuation">(</span>KafkaConfig<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>  
+<span class="token keyword">lazy</span> <span class="token keyword">val</span> producer <span class="token operator">=</span> <span class="token keyword">new</span> KafkaProducer<span class="token punctuation">[</span>A<span class="token punctuation">,</span> A<span class="token punctuation">]</span><span class="token punctuation">(</span>config<span class="token punctuation">)</span>  
+<span class="token keyword">val</span> topic <span class="token operator">=</span> “raw_events”
+
+<span class="token keyword">val</span> routes<span class="token operator">:</span> Route <span class="token operator">=</span> <span class="token punctuation">{</span>  
+  post<span class="token punctuation">{</span>
+    decodeRequest<span class="token punctuation">{</span>
+      entity<span class="token punctuation">(</span>as<span class="token punctuation">[</span><span class="token builtin">String</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">{</span> str <span class="token keyword">=&gt;</span>
+        JsonParser<span class="token punctuation">.</span>parse<span class="token punctuation">(</span>str<span class="token punctuation">)</span><span class="token punctuation">.</span>validate<span class="token punctuation">[</span>Event<span class="token punctuation">]</span> <span class="token keyword">match</span> <span class="token punctuation">{</span>
+          <span class="token keyword">case</span> s<span class="token operator">:</span> JsSuccess<span class="token punctuation">[</span><span class="token builtin">String</span><span class="token punctuation">]</span> <span class="token keyword">=&gt;</span> producer<span class="token punctuation">.</span>send<span class="token punctuation">(</span><span class="token keyword">new</span> KeyedMessage<span class="token punctuation">(</span>topic<span class="token punctuation">,</span> str<span class="token punctuation">)</span><span class="token punctuation">)</span>
+          <span class="token keyword">case</span> e<span class="token operator">:</span> JsError <span class="token keyword">=&gt;</span> BadRequest <span class="token operator">-</span><span class="token operator">&gt;</span> JsError<span class="token punctuation">.</span>toFlatJson<span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">.</span>toString<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>    
+<span class="token punctuation">}</span>
+
+<span class="token keyword">object</span> AkkaHttpMicroservice <span class="token keyword">extends</span> App <span class="token keyword">with</span> Service <span class="token punctuation">{</span>  
+  Http<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>bindAndHandle<span class="token punctuation">(</span>routes<span class="token punctuation">,</span> config<span class="token punctuation">.</span>getString<span class="token punctuation">(</span><span class="token string">"http.interface"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> config<span class="token punctuation">.</span>getInt<span class="token punctuation">(</span><span class="token string">"http.port"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre>
+
+<h6 id="consumingthedatasparkstreaming">Consuming the data: Spark Streaming</h6>
+
+<p>While Akka is still could be used for consuming stream data from Kafka, having Spark in your ecosistem brings Spark Streaming as an option to solve the problem:</p>
+
+<ul>
+<li>it supports variety of data sources</li>
+<li>provides at-least-once semantics</li>
+<li>exactly-once semantics available with Kafka Direct and idempotent storage
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/streaming-flow.png" alt=""></li>
+</ul>
+
+<p>Consuming event stream from Kinesis with Spark Streaming example:  </p>
+
+<pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> ssc <span class="token operator">=</span> <span class="token keyword">new</span> StreamingContext<span class="token punctuation">(</span>conf<span class="token punctuation">,</span> Seconds<span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token keyword">val</span> kinesisStream <span class="token operator">=</span> KinesisUtils<span class="token punctuation">.</span>createStream<span class="token punctuation">(</span>ssc<span class="token punctuation">,</span>appName<span class="token punctuation">,</span>streamName<span class="token punctuation">,</span>  
+   endpointURL<span class="token punctuation">,</span>regionName<span class="token punctuation">,</span> InitialPositionInStream<span class="token punctuation">.</span>LATEST<span class="token punctuation">,</span>     
+   Duration<span class="token punctuation">(</span>checkpointInterval<span class="token punctuation">)</span><span class="token punctuation">,</span> StorageLevel<span class="token punctuation">.</span>MEMORY_ONLY<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment" spellcheck="true">//transforming given stream to Event and saving to C*</span>
+kinesisStream<span class="token punctuation">.</span>map<span class="token punctuation">(</span>JsonUtils<span class="token punctuation">.</span>byteArrayToEvent<span class="token punctuation">)</span>  
+<span class="token punctuation">.</span>saveToCassandra<span class="token punctuation">(</span>keyspace<span class="token punctuation">,</span> table<span class="token punctuation">)</span>
+
+ssc<span class="token punctuation">.</span>start<span class="token punctuation">(</span><span class="token punctuation">)</span>  
+ssc<span class="token punctuation">.</span>awaitTermination<span class="token punctuation">(</span><span class="token punctuation">)</span>  
+</code></pre>
+
+<h6 id="designingforfailurebackupsandpatching">Designing for Failure: Backups and Patching</h6>
+
+<p>Ususally this is the most boring part of any system but it's really important when there exists any possibility that the data which came into the system could be invalid or when all the analytics data center crushes. <br>
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Architecture-Ingestion-Kafka-HDFS.png" alt=""></p>
+
+<p>So why not to store the data in Kafka/Kinesis? For the moment of writing Kinesis has only one day of retention and without backups in case of failure all processing results could be lost. While Kafka supports much more larger retention periods, cost of hardware ownership  should be considered because for example S3 storage is way more cheaper than multiple instances running Kafka as well as S3 SLA are really good.</p>
+
+<p>Apart from having backups the restoring/patching strategies should be designed upfront and tested so that any problems with data could be quickly fixed. Programmer's mistake in aggregation job or duplicate data could break the accuracy of the computation results so fixing the error shouldn't be a big problem. One thing to make all this operations easier is to enforce idempotance in the data model so that multiple repetition of the same operations produce the same results(e.g. sql update is idempotent operation while counter increment is not).</p>
+
+<p>Here is an example of Spark job which reads S3 backup and loads it into Cassandra:  </p>
+
+<pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> sc <span class="token operator">=</span> <span class="token keyword">new</span> SparkContext<span class="token punctuation">(</span>conf<span class="token punctuation">)</span>
+
+sc<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span>s<span class="token string">"s3n://bucket/2015/*/*.gz"</span><span class="token punctuation">)</span>  
+  <span class="token punctuation">.</span>map<span class="token punctuation">(</span>s <span class="token keyword">=&gt;</span> Try<span class="token punctuation">(</span>JsonUtils<span class="token punctuation">.</span>stringToEvent<span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>filter<span class="token punctuation">(</span>_<span class="token punctuation">.</span>isSuccess<span class="token punctuation">)</span><span class="token punctuation">.</span>map<span class="token punctuation">(</span>_<span class="token punctuation">.</span>get<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>saveToCassandra<span class="token punctuation">(</span>config<span class="token punctuation">.</span>keyspace<span class="token punctuation">,</span> config<span class="token punctuation">.</span>table<span class="token punctuation">)</span>
+</code></pre>
+
+<h6 id="thebigpicture">The Big picture</h6>
+
+<p>High-level design of data platform built with SMACK <br>
+<img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Full-Architecture-Ingestion-Kafka-HDFS--1--1.png" alt="">
+So what SMACK stack is:</p>
+
+<ul>
+<li>concise toolbox for wide variety of data processing scenarios</li>
+<li>battle-tested and widely used software with large communities</li>
+<li>easy scalability and replication of data while preserving low latencies</li>
+<li>unified cluster management for heterogeneous loads</li>
+<li>single platform for any kind of applications</li>
+<li>implementation platform for different architecture designs (batch, streaming, Lambda, Kappa)</li>
+<li>really fast time-to-market (e.g. for MVP verification)</li>
+</ul>
+        </section>
+
+        <footer class="post-footer">
+
+
+            <figure class="author-image">
+                <a class="img" href="http://datastrophic.io/author/akirillov/" style="background-image: url(//www.gravatar.com/avatar/935d478a02639e34cd9d753e81436b4e?s=250&amp;d=mm&amp;r=x)"><span class="hidden">Anton Kirillov's Picture</span></a>
+            </figure>
+
+            <section class="author">
+                <h4><a href="http://datastrophic.io/author/akirillov/">Anton Kirillov</a></h4>
+
+                    <p>Distributed systems engineer building systems based on Cassandra/Spark/Mesos stack. Huge Scala/Akka fan.</p>
+                <div class="author-meta">
+                    
+                    
+                </div>
+            </section>
+
+
+            <section class="share">
+                <h4>Share this post</h4>
+                <a class="icon-twitter" href="https://twitter.com/share?text=Data%20processing%20platforms%20architectures%20with%20SMACK%3A%20Spark%2C%20Mesos%2C%20Akka%2C%20Cassandra%20and%20Kafka&amp;url=http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/" onclick="window.open(this.href, &#39;twitter-share&#39;, &#39;width=550,height=235&#39;);return false;">
+                    <span class="hidden">Twitter</span>
+                </a>
+                <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/" onclick="window.open(this.href, &#39;facebook-share&#39;,&#39;width=580,height=296&#39;);return false;">
+                    <span class="hidden">Facebook</span>
+                </a>
+                <a class="icon-google-plus" href="https://plus.google.com/share?url=http://datastrophic.io/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka/" onclick="window.open(this.href, &#39;google-plus-share&#39;, &#39;width=490,height=530&#39;);return false;">
+                    <span class="hidden">Google+</span>
+                </a>
+            </section>
+
+        </footer>
+
+    </article>
+</main>
+
+<aside class="read-next">
+    <a class="read-next-story no-cover" href="http://datastrophic.io/core-concepts-architecture-and-internals-of-apache-spark/">
+        <section class="post">
+            <h2>Apache Spark: core concepts, architecture and internals</h2>
+            <p>This post covers core concepts of Apache Spark such as RDD, DAG, execution workflow, forming stages of tasks and…</p>
+        </section>
+    </a>
+    <a class="read-next-story prev no-cover" href="http://datastrophic.io/evaluating-cassandra-2-1-counters-consistency/">
+        <section class="post">
+            <h2>Cassandra 2.1 Counters: Testing Consistency During Nodes Failures</h2>
+            <p>For some cases such as adserving counters are really handy to accumulate totals for events coming into a system…</p>
+        </section>
+    </a>
+</aside>
+
+
+
+        <footer class="site-footer clearfix">
+            <section class="copyright"><a href="http://datastrophic.io/">datastrophic</a> © 2016</section>
+            <section class="poweredby">Proudly published with <a href="https://ghost.org/">Ghost</a></section>
+        </footer>
+
+    </div>
+
+    <script src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/jquery.min.js"></script>
+
+    <script type="text/javascript" src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/jquery.fitvids.js"></script>
+    <script type="text/javascript" src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/index.js"></script>
+    <script type="text/javascript" src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/prism.js"></script>
+
+
+
+</body></html>
