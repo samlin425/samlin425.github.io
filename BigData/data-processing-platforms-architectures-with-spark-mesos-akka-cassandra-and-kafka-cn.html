@@ -4,7 +4,7 @@
     
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-    <title>Data processing platforms architectures with SMACK: Spark, Mesos, Akka, Cassandra and Kafka</title>
+    <title>数据处理平台架构SMACK: Spark, Mesos, Akka, Cassandra and Kafka 中文版</title>
     <meta name="description" content="">
 
     <meta name="HandheldFriendly" content="True">
@@ -91,41 +91,42 @@
     <article class="post tag-cassandra tag-mesos tag-akka tag-spark tag-kafka tag-smack">
 
         <header class="post-header">
-            <h1 class="post-title">Data processing platforms architectures with SMACK: Spark, Mesos, Akka, Cassandra and Kafka</h1>
+            <h1 class="post-title">数据处理平台架构SMACK: Spark, Mesos, Akka, Cassandra and Kafka 中文版</h1>
             <section class="post-meta">
                 <time class="post-date" datetime="2015-09-16">16 September 2015</time>  on <a href="http://datastrophic.io/tag/cassandra/">Cassandra</a>, <a href="http://datastrophic.io/tag/mesos/">Mesos</a>, <a href="http://datastrophic.io/tag/akka/">Akka</a>, <a href="http://datastrophic.io/tag/spark/">Spark</a>, <a href="http://datastrophic.io/tag/kafka/">Kafka</a>, <a href="http://datastrophic.io/tag/smack/">SMACK</a>
             </section>
         </header>
 
         <section class="post-content">
-            <p>This post is a follow-up of the <a href="http://www.slideshare.net/akirillov/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka">talk given at Big Data AW meetup</a> in Stockholm and focused on different use cases and design approaches for building scalable data processing platforms with SMACK(Spark, Mesos, Akka, Cassandra, Kafka) stack. While stack is really concise and consists of only several components it is possible to implement different system designs which list not only purely batch or stream processing, but more complex Lambda and Kappa architectures as well. So let's start with a really short overview to be on the same page and continue with designs and examples coming from production projects experience.</p>
+            <p>这篇博客是<a href="http://www.slideshare.net/akirillov/data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka">talk given at Big Data AW meetup</a>这篇文章的后续， 并且关注于不同的用例及设计方法，从而使用SMACK(Spark, Mesos, Akka, Cassandra, Kafka) Stack构建多个可扩展的数据处理平台。 当stack足够简洁并且只包含少量的组件，它就有可能实现不同的系统设计，这样就可以既有批处理，又有流处理。 但是也会有更加复杂的Lambda架构和Kappa架构。所以让我们通过概述快速的达成理解上的一致，然后继续看产品项目经验里总结的设计和实例。</p>
+			
 
-<h6 id="recap">Recap</h6>
+<h6 id="recap">概述</h6>
 
 <p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/SMACK-Stack-Architectures---Google-Slides-2015-09-15-23-34-56.jpg" alt=""></p>
 
 <ul>
-<li><p><a href="http://spark.apache.org/">Spark</a> - fast and general engine for distributed, large-scale data processing</p></li>
-<li><p><a href="http://mesos.apache.org/">Mesos</a> - cluster resource management system that provides efficient resource isolation and sharing across distributed applications</p></li>
-<li><p><a href="http://akka.io/">Akka</a> - a toolkit and runtime for building highly concurrent, distributed, and resilient message-driven applications on the JVM</p></li>
-<li><p><a href="http://cassandra.apache.org/">Cassandra</a> - distributed, highly available database designed to handle large amounts of data across multiple datacenters</p></li>
-<li><p><a href="http://kafka.apache.org/">Kafka</a> - a high-throughput, low-latency distributed messaging system/commit log designed for handling real-time data feeds</p></li>
+<li><p><a href="http://spark.apache.org/">Spark</a> - 分布式、大规模数据处理的快速并且通用的引擎</p></li>
+<li><p><a href="http://mesos.apache.org/">Mesos</a> - 集群资源管理系统，提供了高效的分布式应用程序的资源隔离和共享</p></li>
+<li><p><a href="http://akka.io/">Akka</a> - 是一个工具包和运行时间，他能够在Java虚拟机上构建高并发，分布式和高容错的消息驱动应用。</p></li>
+<li><p><a href="http://cassandra.apache.org/">Cassandra</a> - 分布式、高可用的数据库，设计用于处理多个数据中心的大量的数据</p></li>
+<li><p><a href="http://kafka.apache.org/">Kafka</a> - 一种用于处理实时数据馈送的高吞吐量、低延迟的分布式发布订阅消息系统</p></li>
 </ul>
 
-<h6 id="storagelayercassandra">Storage layer: Cassandra</h6>
+<h6 id="storagelayercassandra">存储层: Cassandra</h6>
 
 <p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Cassadnra-XDCR--2-.png" alt="">
-Cassandra is a well-known for its high-availability and high-throughput characteristics and is able to handle enourmous write loads and survive cluster nodes failures. In terms of CAP theorem Cassandra provides tunable consistency/availability for operations.</p>
+Cassandra拥有着众所周知的高可用性高吞吐量的特征，并且能够处理大量的写入负载和生存集群节点故障。 在CAP定理条件中，Cassandra为操作提供了可调的一致性和可用性。</p>
 
-<p>What is more interesting when it comes to data processing is that Cassandra is linearly scalable(increased loads could be addressed by just adding more nodes to a cluster) and it provides cross-datacenter replication(XDCR) capabilities. Actually XDCR provides not only replication but a set of really interesting use cases to be used for:</p>
+<p>更有趣的是，当涉及到数据处理，Cassandra可以线性扩展（通过往集群增加节点来解决增大的负载），另外他还提供了跨数据中心(XDCR)复制的能力，实际上XDCR不仅提供了复制的能力，更多的提供了许多有趣的用例能够被使用:</p>
 
 <ul>
-<li>geo-distributed datacenters handling data specific for the region or located closer to customers</li>
-<li>data migration across datacenters: recovery after failures or moving data to a new DC</li>
-<li>separate operational and analytics workloads</li>
+<li>地理分布的数据中心可以按特定的区域或者按最靠近客户的区域来处理数据</li>
+<li>跨数据中心的数据迁移：在出现故障后做恢复或将数据移动到一个新的数据中心</li>
+<li>工作负载的操作和分析分离</li>
 </ul>
 
-<p>But all these features come for their own price and with Cassandra this price is its data model, which could be thought just as nested sorted map which is distributed across cluster nodes by partition key and entries are sorted/grouped by clustering columns. Here's a small example:</p>
+<p>但是所有的功能都有他们自己的价值，对Cassandra来说，它的价值就是它的数据模型, 它可以被认为是作为嵌套排序图，分布在集群节点的按集群列排序或分组的分区键值和条目。接下来是一个小例子:</p>
 
 <pre class=" language-sql"><code class=" language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> campaign<span class="token punctuation">(</span>  
   id uuid<span class="token punctuation">,</span>
@@ -144,9 +145,9 @@ Cassandra is a well-known for its high-availability and high-throughput characte
 <span class="token keyword">WHERE</span> id<span class="token operator">=</span><span class="token number">40b08953</span><span class="token operator">-</span><span class="token number">a</span>… <span class="token operator">and</span> year<span class="token operator">=</span><span class="token number">2015</span> <span class="token operator">and</span> month<span class="token operator">&gt;</span><span class="token number">8</span><span class="token punctuation">;</span>  
 </code></pre>
 
-<p>To get specific data in some range the full key must be specified and no range clauses allowed except for the last column in list. This constraint is introduced to limit multiple scans for different ranges which will produce random access to disks and lower down the performance. This means that data model should be carefully designed against read queries to limit amount of reads/scans which leads to lesser flexibility when it comes to support of new queries. <a href="http://slides.com/antonkirillov/cassandra-data-modelling-101#/">Here are C* data modelling 101</a>  slides which provide several examples of how CQL tables are represented internally.</p>
+<p>在一定范围内获得明确的数据，键值必须也是明确的，并在列表中的最后一列以外的任何范围子句都不允许。 此约束被引入到限制多个扫描不同的范围，这将产生随机访问磁盘和降低性能。这意味着要小心设计数据模型对阅读查询限制读/扫描的量，从而当它来支持新查询时导致较小的灵活性。<a href="http://slides.com/antonkirillov/cassandra-data-modelling-101#/">这是一些 C* 数据模型 101</a>  的幻灯片，提供了一些CQL表是如何被本质地体现的例子。</p>
 
-<p>But what if one have some tables that need to be joined somehow with another tables? Let's consider the next case: calculate total views per campaign for given month for all campaigns.  </p>
+<p>但是如果有一些表需要和其他一些表连接呢？让我们考虑下以下情况：计算给定月份里的所有campaigns中的每个campaign的总视图。 </p>
 
 <pre class=" language-sql"><code class=" language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> event<span class="token punctuation">(</span>  
   id uuid<span class="token punctuation">,</span>
@@ -158,21 +159,21 @@ Cassandra is a well-known for its high-availability and high-throughput characte
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 
-<p>With given model the only way to achieve this goal is to read all campaigns, read all events, sum the proper ones (with matched campaign id) and assign to campaign. And it looks really challenging to implement such sort of application because amount of data stored in Cassandra could be really huge and won't fit the memory. So the processing of such sort of the data should be done in a distributed manner and Spark perfectly fits this use case.  </p>
+<p>根据给定的模型，唯一的办法是读取所有的campaigns，读取所有的events，将符合要求的部分（匹配campaign id的）相加，并且指给campaign。由于存储在Cassandra里的数据量非常的大并不适合内存化，所以实施这样的应用程序非常有挑战性。因此处理这中数据就应该由一个分布式的方式来完成，而Spark则是一个完美的选择。 </p>
 
-<h6 id="processinglayerspark">Processing layer: Spark</h6>
+<h6 id="processinglayerspark">处理层: Spark</h6>
 
 <p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Spark-Basics--RDD--DAG--Scheduler---1-.png" alt="">
-The main abstraction Spark operates with is RDD(Resilient Distributed Dataset, a distributed collection of elements) and the workflow consists of four main phases:</p>
+Spark操作的主要抽象概念是RDD(弹性分布式数据集, 元素的一种分布式集合)， 工作流程主要分为四个部分:</p>
 
 <ul>
-<li>RDD operations(transformations and actions) form DAG (Direct Acyclic Graph)</li>
-<li>DAG is split into stages of tasks which are then submitted to cluster manager</li>
-<li>stages combine tasks which don’t require shuffling/repartitioning</li>
-<li>tasks run on workers and results then return to the client</li>
+<li>RDD 操作(变换和行动)形式DAG (无回路有向图)</li>
+<li>DAG被拆分成多任务的多个阶段，然后提交到集群管理。</li>
+<li>阶段结合了任务不需要重新分配。</li>
+<li>任务跑在工人和结果上，然后返回给客户端</li>
 </ul>
 
-<p>Here's how one can solve the above problem with Spark and Cassandra:  </p>
+<p>下面演示Spark和Cassandra如何一起解决上面的问题的:  </p>
 
 <pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> sc <span class="token operator">=</span> <span class="token keyword">new</span> SparkContext<span class="token punctuation">(</span>conf<span class="token punctuation">)</span>
 
