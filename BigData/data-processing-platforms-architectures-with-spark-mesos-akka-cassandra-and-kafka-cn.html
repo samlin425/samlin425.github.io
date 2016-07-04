@@ -186,7 +186,7 @@ sc<span class="token punctuation">.</span>cassandraTable<span class="token punct
   <span class="token punctuation">.</span>collect<span class="token punctuation">(</span><span class="token punctuation">)</span>
 </code></pre>
 
-<p>Interaction with Cassandra is performed via <a href="https://github.com/datastax/spark-cassandra-connector">spark-cassandra-connector</a> which makes it really easy and straightforward. There's one more interesting option to work with NoSQL stores - SparkSQL, which translates SQL statements into a series of RDD operations.  </p>
+<p>通过<a href="https://github.com/datastax/spark-cassandra-connector">spark-cassandra-connector</a> ，Cassandra可以更加简单和直接的和Spark进行交互。 这里还有一个有趣的选项，将Spark和NoSQL存储一起工作 -- SaprkSQL，他将SQL声明转换成一系列的RDD运行。</p>
 
 <pre class=" language-scala"><code class=" language-scala"><span class="token keyword">case</span> <span class="token keyword">class</span> CampaignReport<span class="token punctuation">(</span>id<span class="token operator">:</span> <span class="token builtin">String</span><span class="token punctuation">,</span> views<span class="token operator">:</span> <span class="token builtin">Long</span><span class="token punctuation">,</span> clicks<span class="token operator">:</span> <span class="token builtin">Long</span><span class="token punctuation">)</span>
 
@@ -206,74 +206,74 @@ sql<span class="token punctuation">(</span><span class="token string">"""SELECT 
 <span class="token punctuation">}</span><span class="token punctuation">.</span>saveToCassandra<span class="token punctuation">(</span>“keyspace”<span class="token punctuation">,</span> “campaign_report”<span class="token punctuation">)</span>
 </code></pre>
 
-<p>With several lines of code it's possible to implement naive Lamba design which of course could be much more sophisticated, but this example shows just how easy this can be achieved.  </p>
+<p>通过几行代码，他就能实现本身很复杂的原生的Lamba设计，但是这个例子只是为了显示多么容易可以做到这一点。  </p>
 
-<h6 id="almostmapreducebringingprocessingclosertodata">Almost MapReduce: bringing processing closer to data</h6>
+<h6 id="almostmapreducebringingprocessingclosertodata">几乎映射归纳：让处理更接近数据</h6>
 
-<p>Spark-Cassandra connector is data locality aware and reads the data from the closest node in a cluster  thus minimizing the amount of data trasfered around the network. To fully facilitate Spark-C* connector data locality awareness, Spark workers should be collocated with Cassandra nodes. <br>
+<p>Saprk-Cassandra 连接器是一个数据局部性感知及从集群最近的结点读取数据从而减少通过网络传输的数据量。为了全面支持Spark-C*连接器数据局部性感知，Spark工人需要布置在所有Cassandra结点上。<br>
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Cassadnra-Spark--5-.png" alt="">
-Alongside with Spark collocation with Cassandra, it makes sense to separate your operational (or write-heavy) cluster from one for analytics:</p>
+除了Spark和Cassandra的搭配，也可以独立一个运作的（或者重写的）集群用作分析：</p>
 
 <ul>
-<li>clusters can be scaled independently</li>
-<li>data is replicated by Cassandra, no extra-work needed</li>
-<li>analytics cluster has different Read/Write load patterns </li>
-<li>analytics cluster could contain additional data (e.g. dictionaries) and processing results</li>
-<li>Spark resource impact is limited to only one cluster</li>
+<li>集群可以相对独立的被缩放</li>
+<li>数据由Cassandra来复制，没有额外的工作</li>
+<li>用于分析的集群有不同的读/写负载模式 </li>
+<li>用于分析的集群能包含额外的数据（如字典）和处理结果</li>
+<li>Spark资源影响仅受限于一个集群上</li>
 </ul>
 
-<p>Let's look at Spark applications deplyment options one more time: <br>
+<p>让我们再一次看看Spark应用部署选项: <br>
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/cluster-overview.png" alt="">
-There are three main options available for cluster resource manager: </p>
+集群资源管理器中提供了三个主要选项：</p>
 
 <ul>
-<li>Spark Standalone - Spark master and Workers are installed and executed as standalone applications (which obviously introduces some ops overhead and support only static resource allocation per worker)</li>
-<li>YARN is really nice if you already have Hadoop ecosystem</li>
-<li>Mesos which from the beggining was designed for dynamic allocation of cluster resources and not only for running Hadoop applications but for handling heterogeneous workloads</li>
+<li>Saprk 单机版 - Spark master和workers被安装和执行在一个独立的应用程序中（这很明显带来了一些ops开销，而且每个worker只支持静态资源分配）</li>
+<li>如果你在用Hadoop生态系统，YARN是一个不错的选择</li>
+<li>Mesos最初被设计用于动态分配集群资源，不仅为了跑Hadoop应用，而且还可以处理各种各样的负载。</li>
 </ul>
 
-<h6 id="mesosarchitecture">Mesos architecture</h6>
+<h6 id="mesosarchitecture">Mesos架构</h6>
 
 <p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Mesos-Overview.png" alt="">
-Mesos cluster consists of Master nodes which are responsible for resource offers and scheduling and Slave nodes which do the actual heavy lifting of tasks execution. In HA mode with multiple Masters ZooKeeper is used for leader election and service discovery. Applications executed on Mesos are called Frameworks and utilize API to handle resource offers and submit tasks to Mesos. Generally the process of task execution consists of these steps:</p>
+Mesos集群包含了多个负责提供资源和调度的Master结点和真正执行沉重任务的Slave结点。具有多个Masters ZooKeeper的HA模式是用于领导选举和服务发现。Mesos上执行的应用程序被称作框架，利用API来控制资源供应，并提交任务和Mesos。总体上任务执行流程包含以下步骤：</p>
 
 <ul>
-<li>Slaves publish available resources to Master</li>
-<li>Master sends resource offers to Frameworks</li>
-<li>Scheduler replies with tasks and resources needed per task</li>
-<li>Master sends tasks to slaves</li>
+<li>Slaves 发布空闲的资源给Master</li>
+<li>Master发送资源提供给框架</li>
+<li>调度回应每个任务所需的任务和资源</li>
+<li>Master发送任务给slaves</li>
 </ul>
 
-<h6 id="bringingsparkmesosandcassandratogether">Bringing Spark, Mesos and Cassandra together</h6>
+<h6 id="bringingsparkmesosandcassandratogether">Spark，Mesos和Cassandra一起工作</h6>
 
-<p>As said before Spark workers should be collocated with Cassandra nodes to enforce data locality awareness thus lowering amount of network traffic and Cassandra cluster load. Here's one of the possible deplyment scenarios how to achieve this with Mesos. <br>
+<p>如之前所说的，Saprk workers 应该配置在Cassandra结点上来加强数据局部性感知，这样可以降低网络传输量和Cassandra集群负载。下面是一个如何和Mesos一起实现的可行的部署场景。<br>
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Spark-Mesos-Cassandra--2-.png" alt=""></p>
 
 <ul>
-<li>Mesos Masters and ZooKeepers collocated</li>
-<li>Mesos Slaves and Cassandra nodes collocated to enforce better data locality for Spark</li>
-<li>Spark binaries deployed to all worker nodes and <code>spark-env.sh</code> is configured with proper master endpoints and executor jar location</li>
-<li>Spark Executor JAR uploaded to S3/HDFS</li>
+<li>Mesos Masters和ZooKeepers搭配</li>
+<li>Mesos Slaves搭建在Cassandra结点上以加强Spark获得更好的数据局部性</li>
+<li>Spark二进制部署在所有的worker结点上，<code>spark-env.sh</code>被配置了合适的master主终端和执行jar包路径</li>
+<li>Saprk的执行JAR包上传到S3/HDFS</li>
 </ul>
 
-<p>With provided setup Spark job can be submitted to the cluster with simple <code>spark-submit</code> invocation from any worker nodes having Spark binaries installed and assembly jar containing actual job logic uploaded  </p>
+<p>通过提供安装Saprk的任务，在任何已经安装了Spark二进制文件以及包含实际工作逻辑的组件Jar包的worker上就可以调用简单的spark-submit命令来提交到集群 </p>
 
 <pre class=" language-bash"><code class=" language-bash">spark-submit --class io.datastrophic.SparkJob /etc/jobs/spark-jobs.jar  
 </code></pre>
 
-<p>There exist options to run Dockerized Spark so that there's no need to distribute binaries to across every single cluster node.</p>
+<p>有一个已知的选项是运行Docker化的Spark，这样就不需要跨越每一个集群结点来分发二进制文件。</p>
 
-<h6 id="scheduledandlongrunningtasksexecution">Scheduled and Long-running tasks execution</h6>
+<h6 id="scheduledandlongrunningtasksexecution">已计划的和长时间运行的任务执行</h6>
 
-<p>Every data processing system sooner or later faces the necessity of running two types of jobs: scheduled/periodic jobs like periodic batch aggregations and long-running ones which are the case for stream processing. The main requirement for both of these types is fault tolerance -  jobs must continue running even in case of cluster nodes failures. Mesos ecosistem comes with two great frameworks supporting each of this types of jobs.</p>
+<p>每一个数据处理系统迟早会面对跑两种任务的必要性：已计划/周期性任务就像定期分批聚合，长时间运行的任务，如流处理的例子。这两种类型的主要需求是容错 - 即使在集群结点失败的情况下，任务必须继续运行。Mesos生态系统在两个强大的框架下支持任何一种类型。</p>
 
-<p><strong>Marathon</strong> is a framework for fault-tolerant execution of long-running tasks supporting HA mode with ZooKeeper, able to run Docker and having a nice REST API. Here's an example of simple job configuration running <code>spark-submit</code> as shell command:
+<p><strong>Marathon</strong>是一个为了长时间任务执行时容错的框架，他在ZooKeeper上支持HA模型，可以运行Docker，具有很好的REST API。下面是一个用于运行<code>spark-submit</code> shell命令的简单任务配置例子:
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Marathon-2015-09-08-22-13-39.jpg" alt=""></p>
 
-<p><strong>Chronos</strong> has the same charasteristics as Marathon but designed for running sheduled jobs and in general it is distributed HA cron supporting graphs of jobs. Here's an example of S3 compaction job configuration which is implemented as a simple bash script:
+<p><strong>Chronos</strong>拥有和Marathon一样的特性，但是它是为了运行已计划的作业而设计的，并且在总体上是分布式的HAcron, 支持作业图表。下面是一个作为简单批处理脚本来实现S3压实作业配置的一个例子：
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Chronos-2015-09-08-22-21-15.jpg" alt=""></p>
 
-<p>There are plenty of frameworks already available or under active development which targeted to integrate widely used systems with Mesos resource management capabilities. Just to name some of them:</p>
+<p>目前已经有大量的框架存在，同时也有很多框架有针对性的集成了Mesos资源管理功能到广泛使用的系统正在开发中。下面是指列出了其中的一些：</p>
 
 <ul>
 <li>Hadoop</li>
@@ -284,33 +284,33 @@ Mesos cluster consists of Master nodes which are responsible for resource offers
 <li>Samza</li>
 </ul>
 
-<h6 id="ingestingthedata">Ingesting the data</h6>
+<h6 id="ingestingthedata">摄取数据</h6>
 
-<p>So far so good: the storage layer is designed, resource management is set up and jobs are configured. The only thing which is not there yet is the data to process. <br>
+<p>到目前为止一切都挺好：设计了数据层，设置了资源管理，配置好了作业。仅剩的事情就是没有处理数据。 <br>
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Architecture-Ingestion--2-.png" alt="">
-Assuming that incoming data will arrive at high rates the endpoints which will receive it should meet next requirements: </p>
+假设输入的数据将很高几率到达终端，接收它将面临接下来的需求：</p>
 
 <ul>
-<li>provide high throughput/low latency</li>
-<li>being resilient</li>
-<li>allow easy scalability</li>
-<li>support back pressure</li>
+<li>提供高吞吐量/低延迟</li>
+<li>有弹性</li>
+<li>允许简易扩展</li>
+<li>支持背压</li>
 </ul>
 
-<p>Back pressure is not a must, but it would be nice to have this as an option to handle load spikes.</p>
+<p>背压不是必须的，但是对于处理负载峰值最好有。</p>
 
-<p>Akka perfectly fits the requirements and basically it was designed to provide this feature set. So what's is Akka:</p>
+<p>Akka完美地符合这些需求，基本上他就是被设计成提供这些功能集合的。所以什么是Akka：</p>
 
 <ul>
-<li>actor model implementation for JVM</li>
-<li>message-based and asynchronous</li>
-<li>enforces no shared mutable state</li>
-<li>easy scalable from one process to cluster of machines</li>
-<li>actors form hierarchies with parental supervision</li>
-<li>not only concurrency framework: akka-http, akka-streams, akka-persistence</li>
+<li>为JVM实现角色模型</li>
+<li>基于消息和异步</li>
+<li>加强没有分享的可变状态</li>
+<li>将一个进程轻松扩展到机器集群</li>
+<li>在父监督下，角色形成等级</li>
+<li>不仅是并发的框架：akka-http, akka-streams, akka-persistence</li>
 </ul>
 
-<p>Here's a simplified example of three actors which handle JSON HttpRequest, parse it into domain model case class and save it to Cassandra:  </p>
+<p>下面是一个关于三个角色的简单的例子，一个角色处理JSON Http请求，一个角色将请求解析成域名模型案例类，还有一个角色保存这个类到Cassandra: </p>
 
 <pre class=" language-scala"><code class=" language-scala"><span class="token keyword">class</span> HttpActor <span class="token keyword">extends</span> Actor <span class="token punctuation">{</span>  
   <span class="token keyword">def</span> receive <span class="token operator">=</span> <span class="token punctuation">{</span>
@@ -350,20 +350,20 @@ Assuming that incoming data will arrive at high rates the endpoints which will r
 <span class="token punctuation">}</span>
 </code></pre>
 
-<p>It looks like only several lines of code are needed to make everything work, but while writing raw data (events) to Cassandra with Akka is easy there is number of gotchas:</p>
+<p>看起来仅仅几行代码就能够让一切都工作，但是当用Akka轻松的写原始数据（事件）到Cassandra，也会有一些陷阱：</p>
 
 <ul>
-<li>Cassandra is still designed for fast serving but not batch processing, so pre-aggregation of incoming data is needed</li>
-<li>computation time of aggregations/rollups will grow with amount of data</li>
-<li>actors are not suitable for performing aggregation due to stateless design model</li>
-<li>micro-batches could partially solve the problem</li>
-<li>some sort of reliable buffer for raw data is still needed</li>
+<li>Cassandra是被设计成快速服务而不是批量处理，所以输入数据的预聚合处理是很需要的</li>
+<li>聚合/汇总 的计算时间将会随着数据量的大小而成长</li>
+<li>由于无状态设计模式，角色不适合处理聚合</li>
+<li>微批处理可能部分解决该问题</li>
+<li>原始数据依然需要某些可靠的缓存</li>
 </ul>
 
-<h6 id="kafkaasabufferforincomingdata">Kafka as a buffer for incoming data</h6>
+<h6 id="kafkaasabufferforincomingdata">Kafka作为输入数据的缓存</h6>
 
 <p><img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Architecture-Ingestion-Kafka--1-.png" alt="">
-For keeping incoming data with some retention and its further pre-aggregation/processing some sort of distributed commit log could be used. In this case consumers will read data in batches, process it and store it into Cassandra in form of pre-aggregates. Here's an example of publishing JSON data coming over HTTP to Kafka with akka-http:  </p>
+为了保持输入的数据有一些保留，其进一步的预聚合/处理一些分布式提交日志可以被使用。在这里情况下，消费者将分批读取数据，处理成预聚合的形式并保存到Cassandra。 下面是一个利用akka-http发布从HTTP来的JSON数据到Kafak的例子：  </p>
 
 <pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> config <span class="token operator">=</span> <span class="token keyword">new</span> ProducerConfig<span class="token punctuation">(</span>KafkaConfig<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>  
 <span class="token keyword">lazy</span> <span class="token keyword">val</span> producer <span class="token operator">=</span> <span class="token keyword">new</span> KafkaProducer<span class="token punctuation">[</span>A<span class="token punctuation">,</span> A<span class="token punctuation">]</span><span class="token punctuation">(</span>config<span class="token punctuation">)</span>  
@@ -387,18 +387,18 @@ For keeping incoming data with some retention and its further pre-aggregation/pr
 <span class="token punctuation">}</span>
 </code></pre>
 
-<h6 id="consumingthedatasparkstreaming">Consuming the data: Spark Streaming</h6>
+<h6 id="consumingthedatasparkstreaming">消费数据： Spark Streaming</h6>
 
-<p>While Akka is still could be used for consuming stream data from Kafka, having Spark in your ecosistem brings Spark Streaming as an option to solve the problem:</p>
+<p>当Akka还能被用作从Kafka消费流数据，在你的生态系统里有Spark带来的Spark Streaming可以作为解决问题的一个选项：</p>
 
 <ul>
-<li>it supports variety of data sources</li>
-<li>provides at-least-once semantics</li>
-<li>exactly-once semantics available with Kafka Direct and idempotent storage
+<li>它支持数据源的多样性</li>
+<li>提供at-least-once语义</li>
+<li>和Kafka Direct及幂等存储一起，exactly-once语义有效
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/streaming-flow.png" alt=""></li>
 </ul>
 
-<p>Consuming event stream from Kinesis with Spark Streaming example:  </p>
+<p>从Kinesis来的消费事件流通过Spark Streaming的例子：  </p>
 
 <pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> ssc <span class="token operator">=</span> <span class="token keyword">new</span> StreamingContext<span class="token punctuation">(</span>conf<span class="token punctuation">,</span> Seconds<span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 
@@ -415,16 +415,16 @@ ssc<span class="token punctuation">.</span>start<span class="token punctuation">
 ssc<span class="token punctuation">.</span>awaitTermination<span class="token punctuation">(</span><span class="token punctuation">)</span>  
 </code></pre>
 
-<h6 id="designingforfailurebackupsandpatching">Designing for Failure: Backups and Patching</h6>
+<h6 id="designingforfailurebackupsandpatching">为失败做设计：备份和补丁</h6>
 
-<p>Ususally this is the most boring part of any system but it's really important when there exists any possibility that the data which came into the system could be invalid or when all the analytics data center crushes. <br>
+<p>通常这是任何系统最无聊的部分，但是当他有可能存在时它是非常重要的，进入系统的数据可能是无效的或者当所有分析数据中心都崩溃了。<br>
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Architecture-Ingestion-Kafka-HDFS.png" alt=""></p>
 
-<p>So why not to store the data in Kafka/Kinesis? For the moment of writing Kinesis has only one day of retention and without backups in case of failure all processing results could be lost. While Kafka supports much more larger retention periods, cost of hardware ownership  should be considered because for example S3 storage is way more cheaper than multiple instances running Kafka as well as S3 SLA are really good.</p>
+<p>所以为什么不存储数据在Kafka/Kinesis? 目前写在Kinesis的数据只保留一天，没有备份一旦发生失败，所有的处理结果都可能丢失。虽然Kafka支持更大保留周期，但是硬件所有权的成本需要被考虑，因为如S3存储的例子，和S3 SLA一样，更便宜比多个实例运行Kafka更好。</p>
 
-<p>Apart from having backups the restoring/patching strategies should be designed upfront and tested so that any problems with data could be quickly fixed. Programmer's mistake in aggregation job or duplicate data could break the accuracy of the computation results so fixing the error shouldn't be a big problem. One thing to make all this operations easier is to enforce idempotance in the data model so that multiple repetition of the same operations produce the same results(e.g. sql update is idempotent operation while counter increment is not).</p>
+<p>除了有备份恢复/修补策略，应该有前期的设计和测试，这样任何数据上的问题才能够很快被修复。程序员在聚合作业或复制数据上的错误会破坏计算结果的精确性，因此修复错误不应该成为大问题。通过在加强数据模型的幂等可以让所有的运行更简单，这样同一个运行的多数保留会产生相同结果。（举例：sql更新是幂等操作如果计数不增加）</p>
 
-<p>Here is an example of Spark job which reads S3 backup and loads it into Cassandra:  </p>
+<p>下面是一个读取S3备份并加载到Cassandra的Spark业务的例子：  </p>
 
 <pre class=" language-scala"><code class=" language-scala"><span class="token keyword">val</span> sc <span class="token operator">=</span> <span class="token keyword">new</span> SparkContext<span class="token punctuation">(</span>conf<span class="token punctuation">)</span>
 
@@ -434,20 +434,20 @@ sc<span class="token punctuation">.</span>textFile<span class="token punctuation
   <span class="token punctuation">.</span>saveToCassandra<span class="token punctuation">(</span>config<span class="token punctuation">.</span>keyspace<span class="token punctuation">,</span> config<span class="token punctuation">.</span>table<span class="token punctuation">)</span>
 </code></pre>
 
-<h6 id="thebigpicture">The Big picture</h6>
+<h6 id="thebigpicture">大局观</h6>
 
-<p>High-level design of data platform built with SMACK <br>
+<p>用SMACK打造数据平台构建的高层次设计。 <br>
 <img src="./data-processing-platforms-architectures-with-spark-mesos-akka-cassandra-and-kafka-cn_files/Full-Architecture-Ingestion-Kafka-HDFS--1--1.png" alt="">
-So what SMACK stack is:</p>
+总结，什么是SMACK栈：</p>
 
 <ul>
-<li>concise toolbox for wide variety of data processing scenarios</li>
-<li>battle-tested and widely used software with large communities</li>
-<li>easy scalability and replication of data while preserving low latencies</li>
-<li>unified cluster management for heterogeneous loads</li>
-<li>single platform for any kind of applications</li>
-<li>implementation platform for different architecture designs (batch, streaming, Lambda, Kappa)</li>
-<li>really fast time-to-market (e.g. for MVP verification)</li>
+<li>包含了各种各样数据处理方案的简单的工具箱</li>
+<li>久经考验和广泛使用的具有大型社区的软件</li>
+<li>易扩展性和数据复制，同时保持较低的延迟</li>
+<li>统一的为异构负载提供集群管理</li>
+<li>适合各种类型应用的单一平台</li>
+<li>为不同架构设计的平台实现（batch, streaming, Lambda, Kappa）</li>
+<li>非常快速的将产品推到市场 （举例：MVP验证）</li>
 </ul>
         </section>
 
